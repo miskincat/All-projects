@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Not Alma Uygulaması</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #1a73e8;
+        }
+
+        .note-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #1a73e8;
+        }
+
+        textarea.form-control {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .btn {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #1557b0;
+        }
+
+        .notes-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .note-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .note-card h3 {
+            color: #1a73e8;
+            margin-bottom: 0.5rem;
+        }
+
+        .note-card p {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .note-card .date {
+            color: #999;
+            font-size: 0.875rem;
+        }
+
+        .note-actions {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem;
+            color: #666;
+            transition: color 0.3s;
+        }
+
+        .action-btn:hover {
+            color: #1a73e8;
+        }
+
+        .delete-btn:hover {
+            color: #dc3545;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .empty-notes {
+            text-align: center;
+            color: #666;
+            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 1rem auto;
+            }
+            
+            .note-form {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✍️ Not Alma Uygulaması</h1>
+        </div>
+
+        <input type="text" class="search-box" placeholder="Notlarda ara...">
+
+        <div class="note-form">
+            <div class="form-group">
+                <label for="noteTitle">Başlık</label>
+                <input type="text" id="noteTitle" class="form-control" placeholder="Not başlığını girin">
+            </div>
+            <div class="form-group">
+                <label for="noteContent">İçerik</label>
+                <textarea id="noteContent" class="form-control" placeholder="Notunuzu buraya yazın..."></textarea>
+            </div>
+            <button class="btn" onclick="saveNote()">Not Ekle</button>
+            <!-- Farklı Kaydet Butonu -->
+            <button class="btn" onclick="downloadNotes()">Farklı Kaydet</button>
+        </div>
+
+        <div class="notes-container" id="notesContainer">
+            <!-- Notlar buraya dinamik olarak eklenecek -->
+        </div>
+    </div>
+
+    <script>
+        let editingNoteId = null;
+
+        function loadNotes() {
+            return JSON.parse(localStorage.getItem('notes')) || [];
+        }
+
+        function saveNotesToStorage(notes) {
+            localStorage.setItem('notes', JSON.stringify(notes));
+        }
+
+        function displayNotes(notes = loadNotes()) {
+            const notesContainer = document.getElementById('notesContainer');
+            notesContainer.innerHTML = '';
+
+            if (notes.length === 0) {
+                notesContainer.innerHTML = `
+                    <div class="empty-notes">
+                        <h3>Henüz not eklenmemiş</h3>
+                        <p>İlk notunuzu eklemek için yukarıdaki formu kullanın.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            notes.forEach(note => {
+                const noteElement = document.createElement('div');
+                noteElement.className = 'note-card';
+                noteElement.innerHTML = `
+                    <div class="note-actions">
+                        <button class="action-btn" onclick="editNote('${note.id}')">✏️</button>
+                        <button class="action-btn delete-btn" onclick="deleteNote('${note.id}')">🗑️</button>
+                    </div>
+                    <h3>${note.title}</h3>
+                    <p>${note.content}</p>
+                    <div class="date">${new Date(note.date).toLocaleString()}</div>
+                `;
+                notesContainer.appendChild(noteElement);
+            });
+        }
+
+        function saveNote() {
+            const titleInput = document.getElementById('noteTitle');
+            const contentInput = document.getElementById('noteContent');
+            
+            const title = titleInput.value.trim();
+            const content = contentInput.value.trim();
+
+            if (!title || !content) {
+                alert('Lütfen başlık ve içerik alanlarını doldurun!');
+                return;
+            }
+
+            const notes = loadNotes();
+
+            if (editingNoteId) {
+                const noteIndex = notes.findIndex(note => note.id === editingNoteId);
+                if (noteIndex !== -1) {
+                    notes[noteIndex] = {
+                        ...notes[noteIndex],
+                        title,
+                        content,
+                        lastModified: new Date().toISOString()
+                    };
+                }
+                editingNoteId = null;
+            } else {
+                const newNote = {
+                    id: Date.now().toString(),
+                    title,
+                    content,
+                    date: new Date().toISOString(),
+                    lastModified: new Date().toISOString()
+                };
+                notes.unshift(newNote);
+            }
+
+            saveNotesToStorage(notes);
+            displayNotes();
+
+            titleInput.value = '';
+            contentInput.value = '';
+        }
+
+        function editNote(id) {
+            const notes = loadNotes();
+            const note = notes.find(note => note.id === id);
+            
+            if (note) {
+                document.getElementById('noteTitle').value = note.title;
+                document.getElementById('noteContent').value = note.content;
+                editingNoteId = id;
+            }
+        }
+
+        function deleteNote(id) {
+            if (confirm('Bu notu silmek istediğinizden emin misiniz?')) {
+                const notes = loadNotes().filter(note => note.id !== id);
+                saveNotesToStorage(notes);
+                displayNotes();
+            }
+        }
+
+        document.querySelector('.search-box').addEventListener('input', function(e) {
+            const searchText = e.target.value.toLowerCase();
+            const notes = loadNotes();
+            
+            const filteredNotes = notes.filter(note => 
+                note.title.toLowerCase().includes(searchText) || 
+                note.content.toLowerCase().includes(searchText)
+            );
+            
+            displayNotes(filteredNotes);
+        });
+
+        function downloadNotes() {
+            const notes = loadNotes();
+            let notesText = notes.map(note => `Başlık: ${note.title}\nİçerik: ${note.content}\nTarih: ${new Date(note.date).toLocaleString()}\n\n`).join('');
+            const notesBlob = new Blob([notesText], { type: 'text/plain' });
+            const url = URL.createObjectURL(notesBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'notes.txt';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        window.onload = () => displayNotes();
+    </script>
+</body>
+</html>
